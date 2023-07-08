@@ -1,4 +1,4 @@
-import express,{ Request, Response }  from 'express';
+import express,{ Request, RequestHandler, Response, json }  from 'express';
 const app = express();
 import { userRouter } from './routes/user-router'
 
@@ -7,10 +7,13 @@ import { userRouter } from './routes/user-router'
 //     next()
 // }
 // route
+
+app.use(json() as RequestHandler);
+
 app.get('/', function (req: Request , res: Response) {
   res.send('Hello World');
 });
-app.use('/user',userRouter)
+app.use('/user', userRouter)
 
 
 export {app }

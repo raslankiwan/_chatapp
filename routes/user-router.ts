@@ -8,27 +8,17 @@ const router = express.Router();
 // router.put('/user')
 // router.delete('/user')
 
-// const test = async () => {
-//     console.log('xxx');
-//     await test2();
-
-//     //const connection = await mongoose.connect('https://mongo.com')
-//     // console.log(connection) // Object {...} // undefined
-//     console.log('yyy');
-
-// }
-
-// async function test2  () {
-//     console.log('zzz');
-
-// }
-// 'user/...'
 
 router.route('/')
 .post(async (req: Request, res: Response) => {
+    console.log(req.body.username)
+    // console.log(req.query)
+    const {username, firstname, lastname} = req.body
+
     const user = await User.create({
-        username: 'Ahmad2',
-        firstname: 'Ahmad'
+        username,
+        firstname,
+        lastname
     })
 	// await ...
 	res.send({user});
@@ -38,6 +28,15 @@ router.route('/')
     res.send({user});
 
 })
+
+router.get('/:id', async (req: Request, res: Response) => {
+    const id = req.params.id
+    console.log(id)
+    const user = await User.findById(id)
+    res.send({user});
+
+} )
+
 
 
 export { router as userRouter };
