@@ -1,7 +1,8 @@
 import express, { Request, Response } from 'express';
-import { Conversation } from '../models';
+import { Conversation, Message } from '../models';
 import { body, param, validationResult } from 'express-validator';
-
+import { authenticate, validateRequest } from '../middlewares';
+import {ObjectId } from 'mongodb'
 const router = express.Router();
 
 router.route('/').post(
@@ -10,6 +11,7 @@ router.route('/').post(
 		.isMongoId()
 		.withMessage('not valid mongo id')
 		.notEmpty(),
+	authenticate,
 
 	async (req: Request, res: Response) => {
 		const result = validationResult(req);
@@ -33,22 +35,30 @@ router
 		param('conversationId')
 			.isMongoId()
 			.withMessage('Please send a valid mongo id'),
+		authenticate,
+		validateRequest,
 		async (req: Request, res: Response) => {
-			const result = validationResult(req);
 
-			if (result.isEmpty()) {
-				console.log(result);
-
-				const { conversationId } = req.params;
-				const conversation = await Conversation.findById(
-					conversationId
-				);
-				res.send({ conversation });
-			}
-			res.send({ result });
+		const { conversationId } = req.params;
+		// const conversation = await Conversation.findById(
+		// 	conversationId
+		// );
+		const conversations = await Conversation.aggregate()
+			.match({
+				_id: new ObjectId(conversationId) 
+			})
+			.lookup({
+				from: Message.collection.name,
+				localField: '_id',
+				foreignField: 'conversation',
+				as: 'messages'
+			})
+		return res.send({ conversation: conversations[0] });
 		}
 	)
-	.delete(async (req: Request, res: Response) => {
+	.delete(
+		authenticate,
+		async (req: Request, res: Response) => {
 		const conversationId = req.params.conversationId;
 		await Conversation.deleteOne({ _id: conversationId });
 		res.send({ result: 'Success' });
@@ -57,6 +67,7 @@ router
 router.get(
 	'/user/:userId',
 	param('userId').isMongoId().withMessage('Please send a valid mongo id'),
+	authenticate,
 	async (req: Request, res: Response) => {
 		const result = validationResult(req);
 

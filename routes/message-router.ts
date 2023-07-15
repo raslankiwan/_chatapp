@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import { Message } from '../models';
-import { body, param, validationResult } from 'express-validator';
+import { body, param, query } from 'express-validator';
+import { authenticate, validateRequest } from '../middlewares';
 
 const router = express.Router();
 
@@ -12,37 +13,36 @@ router.route('/').post(
 		.notEmpty(),
     body('conversation').isMongoId().withMessage('not valid mongo id'),
     body('value').notEmpty(),
+	validateRequest,
+	authenticate,
 	async (req: Request, res: Response) => {
-		const result = validationResult(req);
-		if (result.isEmpty()) {
-			console.log(result);
-
-			const { sender, receiver, conversation, value } = req.body;
-			const message = await Message.create({
-				sender, receiver, conversation, value
-			});
-			res.send({ message });
-		}
-		res.send({ result });
+		const { sender, receiver, conversation, value } = req.body;
+		const message = await Message.create({
+			sender, receiver, conversation, value
+		});
+		res.send({ message });
 	}
 );
 
 router.get(
 	'/conversation/:conversationId',
 	param('conversationId').isMongoId().withMessage('Please send a valid mongo id'),
+	query('page').isInt(),
+	validateRequest,
+	authenticate,
 	async (req: Request, res: Response) => {
-		const result = validationResult(req);
+		const { conversationId } = req.params;
+		const page = req.query.page as string
+		const skipValue = (+page - 1) * 3
+		const messages = await Message.find({
+			conversation: conversationId
+		}).skip(skipValue).limit(3);
 
-		if (result.isEmpty()) {
-			console.log(result);
+		const total = await Message.find({
+			conversation: conversationId
+		}).count()
 
-			const { conversationId } = req.params;
-			const messages = await Message.find({
-				conversation: conversationId
-			});
-			res.send({ messages });
-		}
-		res.send({ result });
+		return res.send({ messages, total });
 	}
 );
 
